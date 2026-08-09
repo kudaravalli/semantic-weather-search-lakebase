@@ -54,6 +54,7 @@ sync:
   include:
     - app.py
     - app.yaml
+    - embedding/**
     - lakebase.py
     - weather_client.py
     - weather_sync.py

@@ -32,6 +32,7 @@ from weather_schema import (
     WEATHER_DOCUMENTS_TABLE,
     WEATHER_EMBEDDINGS_TABLE,
 )
+from embedding.chunking import chunk_text
 from weather_search import (
     MODEL_NAME,
     get_embedding_model,
@@ -798,6 +799,7 @@ def upsert_weather_documents(
                 embedding_documents: list[
                     tuple[
                         dict[str, Any],
+                        int,
                         str,
                     ]
                 ] = []
@@ -875,13 +877,13 @@ def upsert_weather_documents(
                         ),
                     )
 
-                    chunk_text = (
+                    embedding_text = (
                         build_embedding_text(
                             document
                         )
                     )
 
-                    if not chunk_text:
+                    if not embedding_text:
                         logger.warning(
                             "Skipping empty embedding "
                             "for document %s",
@@ -903,12 +905,19 @@ def upsert_weather_documents(
                         count += 1
                         continue
 
-                    embedding_documents.append(
-                        (
-                            document,
-                            chunk_text,
-                        )
+                    # Chunk the document text using sliding window
+                    chunks = chunk_text(
+                        embedding_text
                     )
+
+                    for chunk_index, chunk in enumerate(chunks):
+                        embedding_documents.append(
+                            (
+                                document,
+                                chunk_index,
+                                chunk,
+                            )
+                        )
 
                 # -----------------------------------------------------------
                 # Batch embedding generation
@@ -918,12 +927,16 @@ def upsert_weather_documents(
                     model = get_embedding_model()
 
                     texts = [
-                        chunk_text
-                        for _, chunk_text
+                        chunk
+                        for _, _, chunk
                         in embedding_documents
                     ]
 
-                    logger.info(f"Encoding {len(texts)} texts in batch")
+                    logger.info(
+                        f"Encoding {len(texts)} chunks "
+                        f"from {len(set(doc['id'] for doc, _, _ in embedding_documents))} "
+                        f"documents in batch"
+                    )
                     vectors = model.encode(
                         texts,
                         normalize_embeddings=True,
@@ -941,7 +954,8 @@ def upsert_weather_documents(
                         index,
                         (
                             document,
-                            chunk_text,
+                            chunk_index,
+                            chunk,
                         ),
                     ) in enumerate(
                         embedding_documents
@@ -951,7 +965,7 @@ def upsert_weather_documents(
                         embedding_id = (
                             build_embedding_id(
                                 document["id"],
-                                chunk_text,
+                                chunk,
                             )
                         )
 
@@ -1022,8 +1036,8 @@ def upsert_weather_documents(
                                 document["location"],
                                 document["source_type"],
                                 document["headline"],
-                                0,  # chunk_index
-                                chunk_text,
+                                chunk_index,
+                                chunk,
                                 document[
                                     "content_hash"
                                 ],

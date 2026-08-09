@@ -20,10 +20,15 @@ Index:
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any
 
 import lakebase
 from sentence_transformers import SentenceTransformer
+
+# Disable sentence-transformers progress bars globally
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
 
 from weather_schema import (
     EMBEDDING_DIMENSION,

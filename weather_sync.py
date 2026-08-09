@@ -923,13 +923,15 @@ def upsert_weather_documents(
                         in embedding_documents
                     ]
 
+                    logger.info(f"Encoding {len(texts)} texts in batch")
                     vectors = model.encode(
                         texts,
                         normalize_embeddings=True,
                         convert_to_numpy=True,
-                        batch_size=32,
+                        batch_size=64,  # Increased from 32 for better throughput
                         show_progress_bar=False,
                     )
+                    logger.info(f"Encoding complete")
 
                     # -------------------------------------------------------
                     # Upsert embeddings

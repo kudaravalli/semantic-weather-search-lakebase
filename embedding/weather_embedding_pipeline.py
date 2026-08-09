@@ -17,7 +17,7 @@ Database:
     Lakebase PostgreSQL + pgvector
 
 Important:
-    Uses psycopg2 only.
+    Uses psycopg only.
     Does not use Spark JDBC.
 """
 
@@ -27,7 +27,7 @@ import os
 from datetime import datetime, timezone
 
 from sentence_transformers import SentenceTransformer
-from psycopg2.extras import execute_values
+from psycopg.extras import execute_values
 
 import lakebase
 

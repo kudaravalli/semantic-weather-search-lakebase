@@ -290,7 +290,7 @@ The embedding pipeline:
 2. Detects previously embedded documents.
 3. Splits large documents into chunks.
 4. Generates Sentence Transformer embeddings.
-5. Writes vectors using psycopg2 and pgvector.
+5. Writes vectors using psycopg and pgvector.
 
 Output:
 
@@ -472,7 +472,7 @@ ingest_weather_embeddings.py
 - Databricks Asset Bundles
 - Lakebase PostgreSQL
 - pgvector
-- psycopg2
+- psycopg
 - Flask
 - Sentence Transformers
 - PyTorch
@@ -529,39 +529,34 @@ Potential enhancements:
 # Repository Components
 
 ```
-weather-rag-assistant/
-
+./
 ├── app.py
 ├── weather_client.py
 ├── weather_sync.py
 ├── weather_search.py
-├── weather_llm.py
 ├── weather_schema.py
 ├── lakebase.py
 
 ├── notebooks/
-│
-├── sync_weather_documents.py
-├── ingest_weather_embeddings.py
-├── weather_semantic_search_demo.py
+├──── sync_weather_documents.py
+├──── ingest_weather_embeddings.py
 
 ├── resources/
-│
-├── sync_weather_documents_job.yml
-├── ingest_weather_embeddings_job.yml
+├──── sync_weather_documents_job.yml
+├──── ingest_weather_embeddings_job.yml
 
 ├── sql/
-├── 00_create_schema.sql
-├── 01_create_location_cache.sql
-├── 02_create_weather_documents.sql
-├── 03_create_embedding_tables.sql
-├── 04_create_indexes.sql
-├── 05_seed_default_locations.sql
-├── 06_vector_benchmark_before_hnsw_idx.sql
-├── 07_create_hnsw_index.sql
-├── 08_vector_benchmark_after_hnsw_idx.sql
-├── 99_cleanup.sql
-├── README.md
+├──── 00_create_schema.sql
+├──── 01_create_location_cache.sql
+├──── 02_create_weather_documents.sql
+├──── 03_create_embedding_tables.sql
+├──── 04_create_indexes.sql
+├──── 05_seed_default_locations.sql
+├──── 06_vector_benchmark_before_hnsw_idx.sql
+├──── 07_create_hnsw_index.sql
+├──── 08_vector_benchmark_after_hnsw_idx.sql
+├──── 99_cleanup.sql
+├──── README.md
 
 
 ├── README.md

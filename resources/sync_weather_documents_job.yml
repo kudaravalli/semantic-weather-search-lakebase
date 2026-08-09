@@ -42,7 +42,7 @@ resources:
 
         timezone_id: "UTC"
 
-        pause_status: PAUSED
+        pause_status: UNPAUSED
         #
         # Change to UNPAUSED after validation.
         #
@@ -61,35 +61,21 @@ resources:
 
 
 
-
-
       # --------------------------------------------------------------
-      # Compute
+      # Environment (for serverless)
       # --------------------------------------------------------------
 
-      job_clusters:
-
-
-        - job_cluster_key: weather_sync_cluster
-
-
-          new_cluster:
-
-
-            spark_version: "15.4.x-scala2.12"
-
-
-            node_type_id: "i3.xlarge"
-
-
-            num_workers: 1
-
-
-            data_security_mode: SINGLE_USER
-
-
-
-
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "5"
+            dependencies:
+              - psycopg>=3.3,<4
+              - sentence-transformers>=3.0.1
+              - sqlalchemy>=2.0.30
+              - databricks-sdk>=0.30.0
+              - requests>=2.32.3
+              - python-dotenv>=1.0.1
 
 
       # --------------------------------------------------------------
@@ -101,68 +87,18 @@ resources:
 
         - task_key: sync_weather_documents
 
-
-          job_cluster_key: weather_sync_cluster
-
-
+          environment_key: default
 
           notebook_task:
-
-
-            notebook_path: ../notebooks/sync_weather_documents.py
-
-
-
+            notebook_path: ../notebooks/sync_weather_documents_nb.py
             base_parameters:
-
-
-
-              # Lakebase destination
-
-              weather_table_name: "weather.weather_documents"
-
-
-
-              location_cache_table_name: "weather.location_cache"
-
-
-
-
-              # Default locations
-
-              locations_json: >
-
-
-                [
-
-                  "Chicago, IL",
-
-                  "Austin, TX",
-
-                  {
-
-                    "lat": 37.7749,
-
-                    "lon": -122.4194
-
-                  },
-
-                  {
-
-                    "lat": 40.7128,
-
-                    "lon": -74.0060
-
-                  }
-
-                ]
-
-
-
-
-              # Maximum documents per source
-
+              lakebase_project: "${var.lakebase_project}"
+              lakebase_branch: "${var.lakebase_branch}"
+              weather_table_name: "${var.weather_schema}.weather_documents"
+              location_cache_table_name: "${var.weather_schema}.location_cache"
+              locations_json: '["Chicago, IL", "Austin, TX", {"lat": 37.7749, "lon": -122.4194}, {"lat": 40.7128, "lon": -74.0060}]'
               alert_limit: "50"
-
               forecast_limit: "50"
+
+
 

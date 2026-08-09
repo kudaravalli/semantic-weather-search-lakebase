@@ -109,7 +109,7 @@ For implementation details of the semantic search pipeline, refer to **README_WE
 - Databricks Apps
 - Lakebase (PostgreSQL)
 - pgvector
-- psycopg2
+- psycopg
 - Sentence Transformers
 - National Weather Service API
 - Databricks Asset Bundles

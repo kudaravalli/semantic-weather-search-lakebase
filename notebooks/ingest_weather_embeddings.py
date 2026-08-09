@@ -5,7 +5,7 @@ ingest_weather_embeddings.py
 Purpose:
 
 Generate vector embeddings for weather documents
-stored in Lakebase using psycopg2 and pgvector.
+stored in Lakebase using psycopg(3) and pgvector.
 
 Input:
 
@@ -70,7 +70,7 @@ import logging
 import os
 import sys
 
-from psycopg2.extras import execute_values
+from psycopg.extras import execute_values
 from sentence_transformers import SentenceTransformer
 
 # ----------------------------------------------------------------------
@@ -361,7 +361,7 @@ ingest_weather_embeddings.py
 Purpose:
 
 Generate vector embeddings for weather documents
-stored in Lakebase using psycopg2 and pgvector.
+stored in Lakebase using psycopg and pgvector.
 
 Input:
 
@@ -426,7 +426,7 @@ import logging
 import os
 import sys
 
-from psycopg2.extras import execute_values
+from psycopg.extras import execute_values
 from sentence_transformers import SentenceTransformer
 
 # ----------------------------------------------------------------------
@@ -881,7 +881,7 @@ logger.info(
 
 
 # ----------------------------------------------------------------------
-# Write embeddings using psycopg2
+# Write embeddings using psycopg
 # ----------------------------------------------------------------------
 
 if embedding_rows:

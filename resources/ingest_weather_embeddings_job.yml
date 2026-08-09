@@ -42,7 +42,7 @@ resources:
         timezone_id: "UTC"
 
 
-        pause_status: PAUSED
+        pause_status: UNPAUSED
 
         #
         # Change to UNPAUSED after validation.
@@ -67,37 +67,25 @@ resources:
       max_concurrent_runs: 1
 
 
-
-
-
-
       # --------------------------------------------------------------
-      # Compute
+      # Environment (for serverless)
       # --------------------------------------------------------------
 
-      job_clusters:
-
-
-        - job_cluster_key: weather_embedding_cluster
-
-
-          new_cluster:
-
-
-            spark_version: "15.4.x-scala2.12"
-
-
-            node_type_id: "i3.xlarge"
-
-
-            num_workers: 2
-
-
-            data_security_mode: SINGLE_USER
-
-
-
-
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "5"
+            dependencies:
+              - psycopg>=3.3,<4
+              - sentence-transformers>=3.0.1
+              - sqlalchemy>=2.0.30
+              - databricks-sdk>=0.30.0
+              - requests>=2.32.3
+              - python-dotenv>=1.0.1
+              - sentence-transformers>=3.0.1
+              - torch>=2.3.1
+              - numpy>=1.26.4
+              - pandas>=2.2.2
 
 
       # --------------------------------------------------------------
@@ -109,76 +97,20 @@ resources:
 
         - task_key: ingest_weather_embeddings
 
-
-          job_cluster_key: weather_embedding_cluster
-
-
+          environment_key: default
 
           notebook_task:
-
-
-            notebook_path: ../notebooks/ingest_weather_embeddings.py
-
-
-
+            notebook_path: ../notebooks/ingest_weather_embeddings_nb.py
             base_parameters:
-
-
-
-              # ------------------------------------------------------
-              # Source
-              # ------------------------------------------------------
-
-              weather_table_name: "weather.weather_documents"
-
-
-
-
-              # ------------------------------------------------------
-              # Destination tables
-              # ------------------------------------------------------
-
-              embeddings_table_name: "weather.weather_embeddings"
-
-
-              alert_embeddings_table_name: "weather.weather_alert_embeddings"
-
-
-              forecast_embeddings_table_name: "weather.weather_forecast_embeddings"
-
-
-
-
-
-              # ------------------------------------------------------
-              # Embedding model
-              # ------------------------------------------------------
-
+              lakebase_project: "${var.lakebase_project}"
+              lakebase_branch: "${var.lakebase_branch}"
+              weather_table_name: "${var.weather_schema}.weather_documents"
+              embeddings_table_name: "${var.weather_schema}.weather_embeddings"
+              alert_embeddings_table_name: "${var.weather_schema}.weather_alert_embeddings"
+              forecast_embeddings_table_name: "${var.weather_schema}.weather_forecast_embeddings"
               embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
-
-
-
-
-
-              # ------------------------------------------------------
-              # Chunking
-              # ------------------------------------------------------
-
               chunk_size: "800"
-
-
               chunk_overlap: "100"
-
-
-
-
-
-              # ------------------------------------------------------
-              # Processing behavior
-              # ------------------------------------------------------
-
               max_documents_per_run: "5000"
-
-
               incremental_mode: "true"
 

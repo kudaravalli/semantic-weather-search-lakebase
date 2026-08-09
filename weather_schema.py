@@ -205,64 +205,82 @@ def _create_indexes() -> None:
     pgvector <=> cosine-distance operator.
     """
 
+    def _safe_create_index(sql: str, index_name: str) -> None:
+        """Create an index, ignoring permission errors if it already exists."""
+        import logging
+        logger = logging.getLogger(__name__)
+    
+        try:
+            lakebase.run_write(sql)
+        except Exception as e:
+            if type(e).__name__ == "InsufficientPrivilege":
+                logger.warning(f"Skipping {index_name}: insufficient privileges (table owned by different role)")
+            else:
+                raise
+
     # -----------------------------------------------------------------------
     # Weather document indexes
     # -----------------------------------------------------------------------
-
-    lakebase.run_write(
+    _safe_create_index(
         f"""
         CREATE INDEX IF NOT EXISTS
         weather_documents_source_type_idx
         ON {WEATHER_DOCUMENTS_TABLE} (source_type)
-        """
+        """,
+        "weather_documents_source_type_idx"
     )
 
-    lakebase.run_write(
+    _safe_create_index(
         f"""
         CREATE INDEX IF NOT EXISTS
         weather_documents_synced_at_idx
         ON {WEATHER_DOCUMENTS_TABLE} (synced_at DESC)
-        """
+        """,
+        "weather_documents_synced_at_idx"
     )
 
-    lakebase.run_write(
+    _safe_create_index(
         f"""
         CREATE INDEX IF NOT EXISTS
         weather_documents_location_idx
         ON {WEATHER_DOCUMENTS_TABLE} (location)
-        """
+        """,
+        "weather_documents_location_idx"
     )
 
     # -----------------------------------------------------------------------
     # Location cache indexes
     # -----------------------------------------------------------------------
 
-    lakebase.run_write(
+    _safe_create_index(
         f"""
         CREATE INDEX IF NOT EXISTS
         location_cache_updated_at_idx
         ON {LOCATION_CACHE_TABLE} (updated_at DESC)
-        """
+        """,
+        "location_cache_updated_at_idx"
     )
 
     # -----------------------------------------------------------------------
     # Embedding indexes
     # -----------------------------------------------------------------------
 
-    lakebase.run_write(
+    _safe_create_index(
         f"""
         CREATE INDEX IF NOT EXISTS
         weather_embeddings_document_id_idx
         ON {WEATHER_EMBEDDINGS_TABLE} (document_id)
-        """
+        """,
+        "weather_embeddings_document_id_idx"
     )
 
-    lakebase.run_write(
+    _safe_create_index(
         f"""
         CREATE INDEX IF NOT EXISTS
         weather_embeddings_source_type_idx
         ON {WEATHER_EMBEDDINGS_TABLE} (source_type)
-        """
+        """,
+        "weather_embeddings_source_type_idx"
     )
 
     # -----------------------------------------------------------------------
@@ -276,12 +294,13 @@ def _create_indexes() -> None:
     # nearest-neighbor performance without requiring periodic IVFFlat
     # list tuning/rebuilding as the dataset grows.
 
-    lakebase.run_write(
+    _safe_create_index(
         f"""
         CREATE INDEX IF NOT EXISTS
         weather_embeddings_embedding_hnsw_idx
         ON {WEATHER_EMBEDDINGS_TABLE}
         USING hnsw (embedding vector_cosine_ops)
-        """
+        """,
+        "weather_embeddings_embedding_hnsw_idx"
     )
 

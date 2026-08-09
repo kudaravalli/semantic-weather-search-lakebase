@@ -1,4 +1,4 @@
-name: ade-lakebase-weather-rag-assistant
+name: weather-asst
 
 
 # ----------------------------------------------------------------------
@@ -93,7 +93,7 @@ env:
 
   - name: NWS_USER_AGENT
 
-    value: "ade-lakebase-weather-rag-assistant"
+    value: "weather-asst"
 
 
 

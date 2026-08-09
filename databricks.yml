@@ -1,5 +1,18 @@
 bundle:
-  name: ade-lakebase-weather-rag-assistant
+  name: weather-asst
+
+# ----------------------------------------------------------------------
+# Variables
+# ----------------------------------------------------------------------
+variables:
+  lakebase_project:
+    description: "Lakebase project name"
+  lakebase_branch:
+    description: "Lakebase branch name"
+    default: "main"
+  weather_schema:
+    description: "Weather data schema/database name"
+    default: "weather"
 
 # ----------------------------------------------------------------------
 # Deployment targets
@@ -9,53 +22,20 @@ targets:
     mode: production
     default: true
     workspace:
-      host: https://<your-prod-workspace-url>
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      lakebase_project: "weather"
+      weather_schema: "weather"
 
 # ----------------------------------------------------------------------
-# Databricks App Resource
+# Databricks App Resource (commented out - deploy manually)
 # ----------------------------------------------------------------------
-resources:
-  apps:
-    weather_app:
-      name: "[${bundle.target}] ade-lakebase-weather-rag-assistant"
-      source_code_path: .
-
-      config:
-        command:
-          - gunicorn
-          - --workers
-          - "2"
-          - --threads
-          - "4"
-          - --timeout
-          - "120"
-          - -b
-          - 0.0.0.0:8000
-          - app:app
-
-      env:
-        - name: WEATHER_TABLE_NAME
-          value: weather_documents
-
-        - name: LOCATION_CACHE_TABLE_NAME
-          value: location_cache
-
-        - name: WEATHER_LOCATIONS_JSON
-          value: >
-            [
-              "Chicago, IL",
-              "Austin, TX",
-              {
-                "lat": 37.7749,
-                "lon": -122.4194
-              }
-            ]
-
-        - name: NWS_USER_AGENT
-          value: ade-lakebase-weather-rag-assistant
-
-        - name: PYTHONUNBUFFERED
-          value: "1"
+# resources:
+#   apps:
+#     weather_app:
+#       name: weather-asst-${workspace.current_user.domain_friendly_name}
+#       description: Weather RAG Assistant with Lakebase
+#       source_code_path: .
 
 # ----------------------------------------------------------------------
 # Jobs
@@ -63,6 +43,7 @@ resources:
 # These files are deployed as part of the bundle.
 #
 # ----------------------------------------------------------------------
+resources:
 include:
   - resources/*.yml
 

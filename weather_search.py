@@ -125,6 +125,7 @@ def embed_query(
         query,
         normalize_embeddings=True,
         convert_to_numpy=True,
+        show_progress_bar=False,
     )
 
     if vector.shape[0] != EMBEDDING_DIMENSION:

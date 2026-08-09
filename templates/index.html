@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>
+        Lakebase Weather RAG Assistant Service
+    </title>
+
+
+    <style>
+
+        body {
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            background:
+                #f5f7fa;
+
+            margin:
+                0;
+
+            color:
+                #1f2937;
+        }
+
+
+        header {
+
+            background:
+                #ff3621;
+
+            color:
+                white;
+
+            padding:
+                20px 40px;
+
+        }
+
+
+        header h1 {
+
+            margin:
+                0;
+
+            font-size:
+                28px;
+
+        }
+
+
+        header p {
+
+            margin-top:
+                8px;
+
+            opacity:
+                0.9;
+
+        }
+
+
+        .container {
+
+            padding:
+                30px;
+
+            max-width:
+                1200px;
+
+            margin:
+                auto;
+
+        }
+
+
+        .card {
+
+            background:
+                white;
+
+            border-radius:
+                10px;
+
+            padding:
+                25px;
+
+            margin-bottom:
+                25px;
+
+            box-shadow:
+                0 2px 8px rgba(0,0,0,.08);
+
+        }
+
+
+        h2 {
+
+            margin-top:
+                0;
+
+            color:
+                #111827;
+
+        }
+
+
+        textarea {
+
+            width:
+                100%;
+
+            min-height:
+                120px;
+
+            border:
+                1px solid #d1d5db;
+
+            border-radius:
+                6px;
+
+            padding:
+                12px;
+
+            font-size:
+                14px;
+
+            font-family:
+                monospace;
+
+        }
+
+
+        input,
+        select {
+
+            box-sizing:
+                border-box;
+
+        }
+
+
+        button {
+
+            background:
+                #ff3621;
+
+            color:
+                white;
+
+            border:
+                none;
+
+            padding:
+                12px 22px;
+
+            border-radius:
+                6px;
+
+            cursor:
+                pointer;
+
+            font-size:
+                15px;
+
+            margin-top:
+                15px;
+
+        }
+
+
+        button:hover {
+
+            background:
+                #d92d1c;
+
+        }
+
+
+        .status {
+
+            margin-top:
+                15px;
+
+            padding:
+                12px;
+
+            border-radius:
+                6px;
+
+            background:
+                #eef2ff;
+
+        }
+
+
+        table {
+
+            width:
+                100%;
+
+            border-collapse:
+                collapse;
+
+        }
+
+
+        th {
+
+            background:
+                #111827;
+
+            color:
+                white;
+
+            padding:
+                10px;
+
+            text-align:
+                left;
+
+        }
+
+
+        td {
+
+            padding:
+                10px;
+
+            border-bottom:
+                1px solid #e5e7eb;
+
+            vertical-align:
+                top;
+
+        }
+
+
+        .alert {
+
+            color:
+                #b91c1c;
+
+            font-weight:
+                bold;
+
+        }
+
+
+        .forecast {
+
+            color:
+                #2563eb;
+
+            font-weight:
+                bold;
+
+        }
+
+
+        .small {
+
+            font-size:
+                12px;
+
+            color:
+                #6b7280;
+
+        }
+
+
+        pre {
+
+            white-space:
+                pre-wrap;
+
+            font-size:
+                13px;
+
+        }
+
+
+    </style>
+
+
+</head>
+
+
+<body>
+
+
+<header>
+
+    <h1>
+        🌦 Lakebase Weather RAG Assistant Service
+    </h1>
+
+    <p>
+        National Weather Service ingestion,
+        Lakebase storage, and RAG-ready weather intelligence
+    </p>
+
+</header>
+
+
+
+<div class="container">
+
+
+
+    <div class="card">
+
+        <h2>
+            Synchronize Weather Data
+        </h2>
+
+
+        <p>
+            Enter locations as city/state values or latitude/longitude JSON.
+        </p>
+
+
+        <textarea id="locations">
+
+[
+  "Chicago, IL",
+  "Austin, TX",
+  {
+    "lat": 37.7749,
+    "lon": -122.4194
+  }
+]
+
+        </textarea>
+
+
+        <br>
+
+
+        <button onclick="syncWeather()">
+
+            Sync Weather
+
+        </button>
+
+
+        <div id="syncStatus" class="status">
+
+            Ready.
+
+        </div>
+
+
+    </div>
+
+
+
+    <div class="card">
+
+        <h2>
+            🔍 Semantic Search
+        </h2>
+
+        <p>
+            Search weather documents using natural language queries.
+        </p>
+
+        <label for="searchQuery" style="font-weight: bold; margin-bottom: 5px; display: block;">
+            Query:
+        </label>
+
+        <input
+            type="text"
+            id="searchQuery"
+            placeholder="e.g., flood risk near rivers, severe thunderstorm warnings"
+            style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; margin-bottom: 15px;"
+        />
+
+        <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+
+            <div style="flex: 1;">
+                <label for="topK" style="font-weight: bold; margin-bottom: 5px; display: block;">
+                    Top K Results:
+                </label>
+                <input
+                    type="number"
+                    id="topK"
+                    value="5"
+                    min="1"
+                    max="20"
+                    style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;"
+                />
+            </div>
+
+            <div style="flex: 1;">
+                <label for="sourceType" style="font-weight: bold; margin-bottom: 5px; display: block;">
+                    Source Type (Optional):
+                </label>
+                <select
+                    id="sourceType"
+                    style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;"
+                >
+                    <option value="">All Types</option>
+                    <option value="alert">Alert</option>
+                    <option value="forecast">Forecast</option>
+                    <option value="observation">Observation</option>
+                </select>
+            </div>
+
+        </div>
+
+        <button onclick="performSearch()">
+            Search Weather Documents
+        </button>
+
+        <div id="searchResults" style="margin-top: 20px;">
+        </div>
+
+    </div>
+
+
+
+    <div class="card">
+
+
+        <h2>
+            Weather Documents
+        </h2>
+
+
+        <button onclick="loadDocuments()">
+
+            Refresh Documents
+
+        </button>
+
+
+        <br><br>
+
+
+        <table>
+
+
+            <thead>
+
+                <tr>
+
+                    <th>
+                        Type
+                    </th>
+
+                    <th>
+                        Location
+                    </th>
+
+                    <th>
+                        Headline
+                    </th>
+
+                    <th>
+                        Narrative
+                    </th>
+
+                    <th>
+                        Synced
+                    </th>
+
+                </tr>
+
+
+            </thead>
+
+
+            <tbody id="documents">
+
+            </tbody>
+
+
+        </table>
+
+
+    </div>
+
+
+
+</div>
+
+
+
+
+
+<script>
+
+
+async function syncWeather() {
+
+
+    const status =
+        document.getElementById(
+            "syncStatus"
+        );
+
+
+    status.innerText =
+        "Synchronizing weather data...";
+
+
+
+    try {
+
+
+        const locations =
+            JSON.parse(
+                document.getElementById(
+                    "locations"
+                ).value
+            );
+
+
+
+        const response =
+            await fetch(
+                "/weather/sync",
+                {
+
+                    method:
+                        "POST",
+
+                    headers:
+                    {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+
+                    body:
+                        JSON.stringify(
+                        {
+                            locations:
+                                locations,
+
+                            limit:
+                                50
+                        })
+
+                }
+            );
+
+
+
+        const data =
+            await response.json();
+
+
+
+        status.innerHTML =
+            `
+            <b>Completed</b><br>
+            Documents synced:
+            ${data.synced}
+            `;
+
+
+
+        loadDocuments();
+
+
+
+    }
+
+    catch(error) {
+
+
+        status.innerHTML =
+            `
+            <b>Error:</b>
+            ${error}
+            `;
+
+    }
+
+
+}
+
+
+
+
+
+async function loadDocuments() {
+
+
+    const tbody =
+        document.getElementById(
+            "documents"
+        );
+
+
+    tbody.innerHTML =
+        '<tr><td colspan="5" style="text-align:center;">Loading documents...</td></tr>';
+
+
+    try {
+
+
+        const response =
+            await fetch(
+                "/weather/documents?limit=100"
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                `HTTP ${response.status}: ${response.statusText}`
+            );
+
+        }
+
+
+        const documents =
+            await response.json();
+
+
+        tbody.innerHTML =
+            "";
+
+
+        if (!documents || documents.length === 0) {
+
+            tbody.innerHTML =
+                '<tr><td colspan="5" style="text-align:center; color: #6b7280;">No documents found. Click "Sync Weather" to fetch data.</td></tr>';
+
+            return;
+
+        }
+
+
+    documents.forEach(
+        doc => {
+
+
+            const row =
+                document.createElement(
+                    "tr"
+                );
+
+
+
+            const typeClass =
+                doc.source_type === "alert"
+                ?
+                "alert"
+                :
+                "forecast";
+
+
+
+            row.innerHTML =
+            `
+
+            <td class="${typeClass}">
+                ${doc.source_type}
+            </td>
+
+
+            <td>
+                ${doc.location}
+            </td>
+
+
+            <td>
+                ${doc.headline || ""}
+            </td>
+
+
+            <td>
+
+                ${doc.narrative_text || ""}
+
+            </td>
+
+
+            <td class="small">
+
+                ${doc.synced_at || ""}
+
+            </td>
+
+            `;
+
+
+
+            tbody.appendChild(
+                row
+            );
+
+
+        }
+    );
+
+
+    }
+
+    catch(error) {
+
+
+        console.error(
+            "Failed to load documents:",
+            error
+        );
+
+
+        tbody.innerHTML =
+            `<tr><td colspan="5" style="text-align:center; color: #b91c1c;">Error loading documents: ${error.message}</td></tr>`;
+
+
+    }
+
+
+}
+
+
+
+
+async function performSearch() {
+
+
+    const query =
+        document.getElementById(
+            "searchQuery"
+        ).value.trim();
+
+
+    const topK =
+        parseInt(
+            document.getElementById(
+                "topK"
+            ).value
+        );
+
+
+    const sourceType =
+        document.getElementById(
+            "sourceType"
+        ).value;
+
+
+    const resultsDiv =
+        document.getElementById(
+            "searchResults"
+        );
+
+
+    if (!query) {
+
+        resultsDiv.innerHTML =
+            '<p style="color: #b91c1c;">Please enter a search query.</p>';
+
+        return;
+
+    }
+
+
+    resultsDiv.innerHTML =
+        '<p style="text-align: center;">Searching...</p>';
+
+
+    try {
+
+
+        const params =
+            new URLSearchParams(
+                {
+                    query: query,
+                    top_k: topK
+                }
+            );
+
+
+        if (sourceType) {
+
+            params.append(
+                "source_type",
+                sourceType
+            );
+
+        }
+
+
+        const response =
+            await fetch(
+                `/weather/search?${params.toString()}`
+            );
+
+
+        if (!response.ok) {
+
+            const errorData =
+                await response.json();
+
+            throw new Error(
+                errorData.error || `HTTP ${response.status}`
+            );
+
+        }
+
+
+        const data =
+            await response.json();
+
+
+        if (!data.results || data.results.length === 0) {
+
+            resultsDiv.innerHTML =
+                '<p style="color: #6b7280;">No results found. Try a different query or sync weather data first.</p>';
+
+            return;
+
+        }
+
+
+        let html =
+            `
+            <h3 style="margin-top: 0;">
+                Search Results (${data.count} found)
+            </h3>
+            <p style="color: #6b7280; font-size: 14px; margin-bottom: 15px;">
+                Query: "${data.query}"
+            </p>
+            `;
+
+
+        data.results.forEach(
+            (result, index) => {
+
+
+                const typeClass =
+                    result.source_type === "alert"
+                    ?
+                    "alert"
+                    :
+                    "forecast";
+
+
+                const similarity =
+                    (result.similarity * 100).toFixed(1);
+
+
+                html +=
+                    `
+                    <div style="border-left: 4px solid ${result.source_type === 'alert' ? '#b91c1c' : '#2563eb'}; padding: 15px; margin-bottom: 15px; background: #f9fafb; border-radius: 6px;">
+
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+
+                            <span class="${typeClass}" style="font-weight: bold; text-transform: uppercase; font-size: 12px;">
+                                ${result.source_type}
+                            </span>
+
+                            <span style="background: #eef2ff; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; color: #4338ca;">
+                                ${similarity}% match
+                            </span>
+
+                        </div>
+
+                        <div style="font-weight: bold; margin-bottom: 5px;">
+                            📍 ${result.location}
+                        </div>
+
+                        ${result.headline ? `<div style="font-weight: bold; color: #111827; margin-bottom: 8px;">${result.headline}</div>` : ''}
+
+                        <div style="font-size: 14px; line-height: 1.6;">
+                            ${result.chunk_text}
+                        </div>
+
+                        <div style="font-size: 12px; color: #9ca3af; margin-top: 8px;">
+                            Document ID: ${result.document_id}
+                        </div>
+
+                    </div>
+                    `;
+
+            }
+        );
+
+
+        resultsDiv.innerHTML =
+            html;
+
+
+    }
+
+    catch(error) {
+
+
+        console.error(
+            "Search failed:",
+            error
+        );
+
+
+        resultsDiv.innerHTML =
+            `<p style="color: #b91c1c;">Error: ${error.message}</p>`;
+
+
+    }
+
+
+}
+
+
+
+window.onload =
+    function() {
+
+        loadDocuments();
+
+    };
+
+
+</script>
+
+
+</body>
+
+</html>
+

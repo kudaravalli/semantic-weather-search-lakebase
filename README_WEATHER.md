@@ -538,8 +538,10 @@ Potential enhancements:
 ├── lakebase.py
 
 ├── notebooks/
-├──── sync_weather_documents.py
 ├──── ingest_weather_embeddings.py
+├──── ingest_weather_embeddings_nb.py
+├──── sync_weather_documents.py
+├──── sync_weather_documents_nb.py
 
 ├── resources/
 ├──── sync_weather_documents_job.yml
@@ -562,3 +564,302 @@ Potential enhancements:
 ├── README.md
 └── README_WEATHER.md
 ```
+
+# Embedding Architecture: Two Paths
+
+## Overview
+
+This project currently implements **two distinct paths** for generating vector embeddings:
+
+1. **Embed-while-syncing** (inline embedding during document sync)
+2. **Separate embedding pipeline** (batch embedding job)
+
+Both paths write to the same `weather.weather_embeddings` table in Lakebase, which can lead to conflicts and confusion.
+
+---
+
+## Path 1: Embed-While-Syncing
+
+**Location:** `weather_sync/upsert_weather_documents.py`
+
+**Flow:**
+```
+API Response
+    |
+    v
+Parse & transform
+    |
+    v
+Upsert to weather.weather_documents
+    |
+    v
+Generate embeddings (chunking + SentenceTransformer)
+    |
+    v
+Upsert to weather.weather_embeddings
+```
+
+**Characteristics:**
+- Embedding happens **inline** during the sync process
+- Each document is embedded immediately after being written
+- Single-pass operation: sync + embed together
+- **Count semantics:** Returns "documents synced" (not "embeddings generated")
+- Triggered by: `notebooks/sync_weather_documents.py` → job: `resources/sync_weather_documents_job.yml`
+
+**Advantages:**
+- Documents are always embedded immediately
+- Simpler pipeline: one job does everything
+- No backlog of unembedded documents
+
+**Disadvantages:**
+- Sync job becomes slower (embedding is compute-intensive)
+- Embedding failures block document sync
+- Cannot re-embed existing documents without re-syncing
+- Couples two concerns (sync vs. embedding)
+
+---
+
+## Path 2: Separate Embedding Pipeline
+
+**Location:** `embedding/weather_embedding_pipeline.py`
+
+**Flow:**
+```
+weather.weather_documents
+    |
+    v
+Find unembedded documents
+    |
+    v
+Chunk text (sliding window)
+    |
+    v
+Generate embeddings (batch)
+    |
+    v
+Upsert to weather.weather_embeddings
+```
+
+**Characteristics:**
+- Embedding happens as a **separate batch job**
+- Finds documents where `embedding_generated_at IS NULL`
+- Can process multiple documents in a batch
+- **Count semantics:** Returns "embeddings generated" (chunk count, not document count)
+- Triggered by: `notebooks/ingest_weather_embeddings.py` → job: `resources/ingest_weather_embeddings_job.yml`
+
+**Advantages:**
+- Decouples sync from embedding
+- Sync job stays fast and focused
+- Can re-run embedding independently
+- Better separation of concerns
+- Can scale embedding compute separately
+
+**Disadvantages:**
+- Requires two jobs instead of one
+- Documents have a lag before embeddings exist
+- Needs coordination between sync and embedding schedules
+
+---
+
+## The Conflict Problem
+
+### Current State: Both Paths Active
+
+If both paths are enabled, **conflicts occur**:
+
+1. **Duplicate work:** Both paths try to embed the same documents
+2. **Race conditions:** Which embedding wins depends on execution order
+3. **Confusing metrics:**
+   - Sync job reports "documents synced"
+   - Embedding job reports "embeddings generated" (chunks, not docs)
+   - Neither count is the full picture
+4. **Wasted compute:** Embedding happens twice for the same document
+
+### Example Conflict Scenario
+
+```
+T0: Sync job runs
+    → Syncs 10 documents
+    → Embeds 10 documents inline (generates 50 chunks)
+    → Reports "10 documents synced"
+
+T1: Embedding job runs
+    → Finds 0 unembedded documents (all already done)
+    → Reports "0 embeddings generated"
+    → Everything looks fine
+
+T2: Sync job runs again
+    → Syncs 5 new documents
+    → Embeds 5 documents inline (generates 25 chunks)
+    → Reports "5 documents synced"
+
+T3: Embedding job runs again
+    → Still finds 0 unembedded documents
+    → Reports "0 embeddings generated"
+    → User wonders why embedding job never does anything
+```
+
+---
+
+## Choosing One Authoritative Path
+
+### Option A: Use Embed-While-Syncing (Path 1 Only)
+
+**Enable:**
+- Keep `weather_sync/upsert_weather_documents.py` as-is
+- Keep `notebooks/sync_weather_documents.py` job
+
+**Disable:**
+- Comment out or remove the embedding pipeline job: `resources/ingest_weather_embeddings_job.yml`
+- Or disable scheduling in the job definition
+
+**When to choose this:**
+- Dataset is small (< 1000 documents)
+- Real-time embedding is important
+- You want simpler pipeline (one job)
+- Sync frequency is low (hourly or less)
+
+---
+
+### Option B: Use Separate Pipeline (Path 2 Only) ✅ **RECOMMENDED**
+
+**Enable:**
+- Keep `embedding/weather_embedding_pipeline.py` as-is
+- Keep `notebooks/ingest_weather_embeddings.py` job
+
+**Disable:**
+- Remove embedding logic from `weather_sync/upsert_weather_documents.py`
+- Modify to ONLY write to `weather.weather_documents`
+- Do NOT write to `weather.weather_embeddings` in sync path
+
+**When to choose this:**
+- Dataset is large (> 1000 documents)
+- Sync speed is important
+- You want to scale sync and embedding independently
+- Better separation of concerns
+- Can batch-embed efficiently
+
+**Implementation Steps:**
+
+1. **Edit `weather_sync/upsert_weather_documents.py`:**
+   - Remove all embedding-related imports (`SentenceTransformer`, `chunking`)
+   - Remove embedding generation logic
+   - Remove `weather_embeddings` table writes
+   - Keep only document sync logic
+
+2. **Verify `notebooks/sync_weather_documents.py`:**
+   - Should only sync documents
+   - Metrics should report "documents synced"
+
+3. **Schedule both jobs:**
+   - Sync job: runs frequently (e.g., every 6 hours)
+   - Embedding job: runs after sync (e.g., 30 minutes after sync completes)
+
+4. **Update metrics:**
+   - Sync job: "X documents synced"
+   - Embedding job: "Y embeddings generated for Z documents"
+
+---
+
+## Count Semantics Clarification
+
+### "Documents Synced" vs "Embeddings Generated"
+
+These are **different metrics**:
+
+| Metric | What It Counts | Where It Appears |
+|--------|----------------|------------------|
+| **Documents synced** | Number of documents written to `weather.weather_documents` | Sync job output |
+| **Embeddings generated** | Number of **chunks** (not documents) written to `weather.weather_embeddings` | Embedding job output |
+
+### Why the difference?
+
+**Chunking:** Each document is split into multiple overlapping chunks:
+- **CHUNK_SIZE:** 800 characters
+- **CHUNK_OVERLAP:** 100 characters
+- A 2000-character document → ~3 chunks
+- A 5000-character document → ~7 chunks
+
+**Example:**
+```
+10 documents synced
+    → Could generate 50-80 embeddings (chunks)
+    → Depends on document length distribution
+```
+
+### Recommended Metrics
+
+If using **Path 2 (Separate Pipeline)**:
+
+**Sync job output:**
+```json
+{
+  "weather_documents_table": "weather.weather_documents",
+  "documents_synced": 42,
+  "timestamp": "2025-01-15T10:30:00Z"
+}
+```
+
+**Embedding job output:**
+```json
+{
+  "weather_documents_table": "weather.weather_documents",
+  "weather_embeddings_table": "weather.weather_embeddings",
+  "documents_processed": 42,
+  "embeddings_generated": 210,
+  "chunks_per_document_avg": 5.0
+}
+```
+
+---
+
+## Migration Plan: Path 1 → Path 2
+
+If currently using embed-while-syncing and want to migrate:
+
+### Step 1: Verify separate pipeline works
+
+```bash
+# Run embedding job manually
+databricks bundle run ingest_weather_embeddings_job --target dev
+```
+
+### Step 2: Disable inline embedding
+
+Edit `weather_sync/upsert_weather_documents.py` to remove embedding logic.
+
+### Step 3: Clear and regenerate embeddings (optional)
+
+```sql
+-- Clear existing embeddings
+DELETE FROM weather.weather_embeddings;
+
+-- Mark all documents as unembedded
+UPDATE weather.weather_documents
+SET embedding_generated_at = NULL;
+```
+
+### Step 4: Run embedding pipeline
+
+```bash
+databricks bundle run ingest_weather_embeddings_job --target dev
+```
+
+### Step 5: Schedule both jobs
+
+Update `databricks.yml` to schedule:
+- Sync: every 6 hours
+- Embedding: 30 minutes after sync
+
+---
+
+## Recommendation
+
+**Use Path 2 (Separate Embedding Pipeline)** for:
+- ✅ Better separation of concerns
+- ✅ Faster sync operations
+- ✅ Independent scaling
+- ✅ Easier debugging
+- ✅ More flexible re-embedding
+
+**Current status:** Both paths are implemented but only one should be active at a time.

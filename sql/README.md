@@ -352,8 +352,6 @@ weather.weather_embeddings              N
 
 # Why Manual Setup?
 
-The Databricks notebooks use Spark JDBC for reliable execution.
-
 Spark JDBC has limitations with PostgreSQL-specific features:
 
 - Cannot reliably execute arbitrary DDL

@@ -228,7 +228,7 @@ def initialize_application() -> None:
         "Initializing Weather Service application"
     )
 
-    # ensure_weather_schema()
+    ensure_weather_schema()
 
     # Load the model during startup rather than on the first
     # search request. This moves the model-loading cost out of

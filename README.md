@@ -52,23 +52,31 @@ This project is based on the Day-2 "The Rise of Data AI Engineer" sample applica
 # Repository Structure
 
 ```
-weather-service/
+./
 ├── app.py
 ├── app.yaml
 ├── databricks.yml
-├── embedding
+
+├── embedding/
 │   ├── chunking.py
 │   └── weather_embedding_pipeline.py
-├── lakebase.py
-├── notebooks
+
+├── notebooks/
 │   ├── ingest_weather_embeddings.py
-│   └── sync_weather_documents.py
-├── requirements.txt
-├── resources
+│   ├── ingest_weather_embeddings_nb.py
+│   ├── sync_weather_documents.py
+│   └── sync_weather_documents_nb.py
+
+├── lakebase.py
+
+├── resources/
 │   ├── ingest_weather_embeddings_job.yml
 │   └── sync_weather_documents_job.yml
+
+├── requirements.txt
 ├── setup_secrets.py
-├── sql
+
+├── sql/
 │   ├── 00_create_schema.sql
 │   ├── 01_create_location_cache.sql
 │   ├── 02_create_weather_documents.sql
@@ -79,8 +87,10 @@ weather-service/
 │   ├── 07_create_hnsw_index.sql
 │   ├── 08_vector_benchmark_after_hnsw_idx.sql
 │   └── 99_cleanup.sql
-├── templates
+
+├── templates/
 │   └── index.html
+
 ├── weather_client.py
 ├── weather_schema.py
 ├── weather_search.py

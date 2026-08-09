@@ -42,7 +42,7 @@ resources:
         timezone_id: "UTC"
 
 
-        pause_status: UNPAUSED
+        pause_status: PAUSED
 
         #
         # Change to UNPAUSED after validation.
